@@ -152,12 +152,19 @@ public class DependencyResolver {
         Map<ReleaseRepo, Project> mapping = new HashMap<>();
         Set<Project> rootProjects = new HashSet<>();
         for (ReleaseRepo repo : releaseCollection) {
+            log.debug("==== received relRepo from domino: " + repo);
             Project project = mapToProject(repo, depsToCut);
             mapping.put(repo, project);
-            if (repo.isRoot() && filterProductized(project)) {
+            boolean root = repo.isRoot();
+            boolean filterProductized = filterProductized(project);
+            if (root && filterProductized) {
+                log.debug("++++++++++++++ is root " + root + "  filterProductized " + filterProductized);
                 rootProjects.add(project);
+            } else {
+                log.debug("-------------- no root " + root + "  filterProductized " + filterProductized);
             }
         }
+        log.debug("==== End received relRepos from domino");
         setupDependencies(mapping, depsToCut);
         setDepth(rootProjects);
         DependencyResult result = new DependencyResult();
@@ -170,11 +177,15 @@ public class DependencyResolver {
             ReleaseRepo repo = entry.getKey();
             Project project = entry.getValue();
             Set<ScmRevision> toCut = depsToCut.getOrDefault(repo.getRevision(), Collections.emptySet());
+
+            log.debug("Setting deps for " + repo);
             project.setDependencies(
                     repo.getDependencies()
                             .stream()
                             .filter(d -> !toCut.contains(d.getRevision()))
+                            .peek(p -> log.debug(" -- dep " + p))
                             .map(mapping::get)
+                            .peek(p -> log.debug(" " + (filterProductized(p) ? " +++ keep" : " --- remove") + " dep "))
                             .filter(this::filterProductized)
                             .collect(Collectors.toSet()));
         }
@@ -276,13 +287,13 @@ public class DependencyResolver {
         return project;
     }
 
-    private void setDepth(Set<Project> rootProjects) {
+    private static void setDepth(Set<Project> rootProjects) {
         for (Project project : rootProjects) {
             setDepth(project, 0);
         }
     }
 
-    private void setDepth(Project project, int depth) {
+    private static void setDepth(Project project, int depth) {
         if (depth > project.getDepth()) {
             project.setDepth(depth);
         }
