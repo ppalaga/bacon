@@ -152,19 +152,17 @@ public class DependencyResolver {
         Map<ReleaseRepo, Project> mapping = new HashMap<>();
         Set<Project> rootProjects = new HashSet<>();
         for (ReleaseRepo repo : releaseCollection) {
-            log.debug("==== received relRepo from domino: " + repo);
             Project project = mapToProject(repo, depsToCut);
+            log.debug("==== received project from domino: " + repo);
             mapping.put(repo, project);
-            boolean root = repo.isRoot();
-            boolean filterProductized = filterProductized(project);
-            if (root && filterProductized) {
-                log.debug("++++++++++++++ is root " + root + "  filterProductized " + filterProductized);
+            //boolean root = repo.isRoot();
+            if (
+            //root &&
+            filterProductized(project)) {
                 rootProjects.add(project);
-            } else {
-                log.debug("-------------- no root " + root + "  filterProductized " + filterProductized);
             }
         }
-        log.debug("==== End received relRepos from domino");
+        log.debug("==== End received projects from domino");
         setupDependencies(mapping, depsToCut);
         setDepth(rootProjects);
         DependencyResult result = new DependencyResult();
@@ -192,18 +190,24 @@ public class DependencyResolver {
     }
 
     /**
-     * Returns false if the project should be excluded.
+     *
+     * @param releaseRepo the {@link Project} to decide about
+     * @return {@code true} if the given project should be kept in the resulting build configuration; {@code false}
+     *         otherwise
      */
     private boolean filterProductized(Project releaseRepo) {
-        boolean excludeAlreadyBuilt = !config.isRebuildNonAutoBuilds();
-        boolean excludeRedhatSuffix = config.isExcludeProductizedArtifacts() || excludeAlreadyBuilt;
+        boolean dontRebuildCustomBuilds = !config.isRebuildNonAutoBuilds();
+        boolean excludeRedhatSuffix = config.isExcludeProductizedArtifacts() || dontRebuildCustomBuilds;
         if (excludeRedhatSuffix) {
             SuffixedVersion version = versionParser.parse(releaseRepo.getFirstGAV().getVersion());
             if (version.isSuffixed()) {
+                log.debug(
+                        "--------------filterProductized false bc. suffixed and excludeRedhatSuffix = "
+                                + excludeRedhatSuffix);
                 return false;
             }
         }
-        if (excludeAlreadyBuilt) {
+        if (dontRebuildCustomBuilds) {
             MavenLookupRequest request = MavenLookupRequest.builder()
                     .mode(DaHelper.getMode(false, false, null))
                     .brewPullActive(false)
@@ -218,6 +222,10 @@ public class DependencyResolver {
             boolean everythingInTheSameVersion = versionsFound.size() == minVersionCount;
             boolean anythingBuilt = everythingBuilt || versionsFound.size() > 1;
             if (everythingBuilt && everythingInTheSameVersion) {
+                log.debug(
+                        "--------------filterProductized false bc. everythingBuilt " + everythingBuilt
+                                + " && everythingInTheSameVersion " + everythingInTheSameVersion + "; versionsFound = "
+                                + versionsFound);
                 return false;
             }
             if (anythingBuilt) {
@@ -243,9 +251,16 @@ public class DependencyResolver {
                 log.warn(
                         "Excluding project " + releaseRepo.getFirstGAV() + " because some artifacts are build, however"
                                 + message + "." + debugOff);
+                log.debug(
+                        "--------------filterProductized false bc. anythingBuilt " + anythingBuilt
+                                + "; versionsFound = " +
+                                mavenLookupResults.stream()
+                                        .map(r -> r.getGav() + " -> " + r.getBestMatchVersion())
+                                        .collect(Collectors.joining(", ")));
                 return false;
             }
         }
+        log.debug("--------------filterProductized true");
         return true;
     }
 
