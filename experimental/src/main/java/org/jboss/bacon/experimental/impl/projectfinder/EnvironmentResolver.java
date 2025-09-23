@@ -1,33 +1,42 @@
 package org.jboss.bacon.experimental.impl.projectfinder;
 
+import java.time.Duration;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
 import org.jboss.bacon.experimental.impl.config.BuildConfigGeneratorConfig;
+import org.jboss.bacon.experimental.impl.util.JsonCache;
 import org.jboss.pnc.bacon.common.exception.FatalException;
+import org.jboss.pnc.bacon.pig.impl.utils.FileDownloadUtils;
 import org.jboss.pnc.bacon.pnc.common.ClientCreator;
 import org.jboss.pnc.client.EnvironmentClient;
-import org.jboss.pnc.client.RemoteCollection;
 import org.jboss.pnc.client.RemoteResourceException;
 import org.jboss.pnc.dto.Environment;
 
 public class EnvironmentResolver {
     @java.lang.SuppressWarnings("all")
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(EnvironmentResolver.class);
+    private static final JsonCache<Collection<Environment>> environmentsCache = JsonCache.forCollection(
+            Environment.class,
+            FileDownloadUtils.getCacheDirectory().resolve("json-cache/environments.json"),
+            Duration.ofDays(1));
     private final Map<String, Environment> environments = new HashMap<>();
 
     public EnvironmentResolver(BuildConfigGeneratorConfig config) {
-        try {
-            EnvironmentClient environmentClient = new ClientCreator<>(EnvironmentClient::new).newClient();
-            RemoteCollection<Environment> all = environmentClient.getAll(Optional.empty(), Optional.empty());
-            for (Environment env : all) {
-                environments.put(env.getId(), env);
+        final Collection<Environment> all = environmentsCache.get(() -> {
+            try {
+                EnvironmentClient environmentClient = new ClientCreator<>(EnvironmentClient::new).newClient();
+                return environmentClient.getAll(Optional.empty(), Optional.empty()).getAll();
+            } catch (RemoteResourceException e) {
+                throw new FatalException("Failed to load PNC environment list.", e);
             }
-            validateDefaultEnvironment(config.getDefaultValues().getEnvironmentName());
-        } catch (RemoteResourceException e) {
-            throw new FatalException("Failed to load PNC environment list.", e);
+        });
+        for (Environment env : all) {
+            environments.put(env.getId(), env);
         }
+        validateDefaultEnvironment(config.getDefaultValues().getEnvironmentName());
     }
 
     private void validateDefaultEnvironment(String defaultEnv) {
