@@ -7,6 +7,7 @@ import org.jboss.da.model.rest.GAV;
 public class Project {
     private String sourceCodeURL;
     private String sourceCodeRevision;
+    private String sourceCodePath;
     private Set<GAV> gavs;
     private String name;
     private Set<Project> dependencies;
@@ -46,6 +47,10 @@ public class Project {
         return this.sourceCodeRevision;
     }
 
+    public String getSourceCodePath() {
+        return sourceCodePath;
+    }
+
     @java.lang.SuppressWarnings("all")
     public Set<GAV> getGavs() {
         return this.gavs;
@@ -79,6 +84,10 @@ public class Project {
     @java.lang.SuppressWarnings("all")
     public void setSourceCodeRevision(final String sourceCodeRevision) {
         this.sourceCodeRevision = sourceCodeRevision;
+    }
+
+    public void setSourceCodePath(String sourcePath) {
+        this.sourceCodePath = sourcePath;
     }
 
     @java.lang.SuppressWarnings("all")
@@ -130,6 +139,11 @@ public class Project {
         if (this$sourceCodeRevision == null ? other$sourceCodeRevision != null
                 : !this$sourceCodeRevision.equals(other$sourceCodeRevision))
             return false;
+        final java.lang.Object this$sourceCodePath = this.getSourceCodePath();
+        final java.lang.Object other$sourceCodePath = other.getSourceCodePath();
+        if (this$sourceCodePath == null ? other$sourceCodePath != null
+                : !this$sourceCodePath.equals(other$sourceCodePath))
+            return false;
         final java.lang.Object this$gavs = this.getGavs();
         final java.lang.Object other$gavs = other.getGavs();
         if (this$gavs == null ? other$gavs != null : !this$gavs.equals(other$gavs))
@@ -151,6 +165,8 @@ public class Project {
         result = result * PRIME + ($sourceCodeURL == null ? 43 : $sourceCodeURL.hashCode());
         final java.lang.Object $sourceCodeRevision = this.getSourceCodeRevision();
         result = result * PRIME + ($sourceCodeRevision == null ? 43 : $sourceCodeRevision.hashCode());
+        final java.lang.Object $sourceCodePath = this.getSourceCodePath();
+        result = result * PRIME + ($sourceCodePath == null ? 43 : $sourceCodePath.hashCode());
         final java.lang.Object $gavs = this.getGavs();
         result = result * PRIME + ($gavs == null ? 43 : $gavs.hashCode());
         return result;

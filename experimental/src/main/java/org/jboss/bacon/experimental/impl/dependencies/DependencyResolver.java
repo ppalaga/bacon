@@ -292,9 +292,11 @@ public class DependencyResolver {
                 .map(a -> new GAV(a.getGroupId(), a.getArtifactId(), a.getVersion()))
                 .collect(Collectors.toSet());
         project.setGavs(gavs);
-        project.setSourceCodeURL(getSourceCodeURL(repo.getRevision()));
-        project.setSourceCodeRevision(getSourceCodeRevision(repo.getRevision()));
-        if (depsToCut.containsKey(repo.getRevision())) {
+        final ScmRevision rev = repo.getRevision();
+        project.setSourceCodeURL(getSourceCodeURL(rev));
+        project.setSourceCodeRevision(getSourceCodeRevision(rev));
+        project.setSourceCodePath(rev != null && rev.getRepository() != null ? rev.getRepository().getPath() : null);
+        if (depsToCut.containsKey(rev)) {
             GAV firstGAV = project.getFirstGAV();
             log.warn("Project " + firstGAV + " has cut some dependency(ies).");
             project.setCutDependency(true);
